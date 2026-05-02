@@ -4,7 +4,7 @@ const { NetgearProAvAuthError, NetgearProAvClient } = require("../lib/client");
 
 const OPERATIONS = {
   deviceInfo: (client) => client.deviceInfo(),
-  portConfig: (client, msg, node) => client.portConfig(requiredPortId(msg, node)),
+  portConfig: async (client, msg, node) => client.portConfig(await requiredApiPortId(client, msg, node)),
   portConfigAll: (client) => client.portConfig(),
   portsStatus: (client) => client.portsStatus(),
   portStatus: (client) => client.portStatus(),
@@ -16,35 +16,27 @@ const OPERATIONS = {
   neighbors: (client) => client.neighbors(),
   profileList: (client) => client.profileList(),
   poeInfo: (client) => client.poeInfo(),
-  poePortConfig: (client, msg, node) => client.poePortConfig(requiredPortId(msg, node)),
+  poePortConfig: async (client, msg, node) => client.poePortConfig(await requiredApiPortId(client, msg, node)),
   lagConfig: (client) => client.lagConfig(),
   stacking: (client) => client.stacking(),
   vlanMembership: (client, msg, node) => client.vlanMembership(requiredValue(msg.vlanId ?? msg.payload?.vlanId ?? node.vlanId, "vlanId")),
   saveConfig: (client) => client.saveConfig(),
   reboot: (client, msg, node) => client.reboot(msg.save ?? msg.payload?.save ?? node.saveOnReboot),
   setFanMode: (client, msg, node) => client.setFanMode(requiredValue(msg.fanMode ?? msg.payload?.fanMode ?? node.fanMode, "fanMode")),
-  setPortAdmin: (client, msg, node) => client.setPortAdminState(requiredPortId(msg, node), requiredBoolean(msg, node), msg.config || msg.payload?.config),
-  setPortDescription: (client, msg, node) => client.setPortDescription(requiredPortId(msg, node), msg.description ?? msg.payload?.description ?? node.description ?? "", msg.config || msg.payload?.config),
-  setPoeEnabled: (client, msg, node) => client.setPoeEnabled(requiredPortId(msg, node), requiredBoolean(msg, node), msg.config || msg.payload?.config),
-  resetPoe: (client, msg, node) => client.resetPoe(requiredPortId(msg, node), msg.config || msg.payload?.config)
+  setPortAdmin: async (client, msg, node) => client.setPortAdminState(await requiredApiPortId(client, msg, node), requiredBoolean(msg, node), msg.config || msg.payload?.config),
+  setPortDescription: async (client, msg, node) => client.setPortDescription(await requiredApiPortId(client, msg, node), msg.description ?? msg.payload?.description ?? node.description ?? "", msg.config || msg.payload?.config),
+  setPoeEnabled: async (client, msg, node) => client.setPoeEnabled(await requiredApiPortId(client, msg, node), requiredBoolean(msg, node), msg.config || msg.payload?.config),
+  resetPoe: async (client, msg, node) => client.resetPoe(await requiredApiPortId(client, msg, node), msg.config || msg.payload?.config)
 };
 
-module.exports = function registerNetgearProAvSwitch(RED) {
-  function NetgearProAvSwitchNode(config) {
+module.exports = function registerNetgearProAvNodes(RED) {
+  function NetgearProAvSwitchConfigNode(config) {
     RED.nodes.createNode(this, config);
     this.name = config.name;
     this.host = config.host;
     this.port = Number(config.port || 443);
     this.verifySsl = Boolean(config.verifySsl);
     this.timeout = Number(config.timeout || 15000);
-    this.operation = config.operation || "deviceInfo";
-    this.portId = config.portId;
-    this.enabled = config.enabled;
-    this.description = config.description;
-    this.fanMode = config.fanMode;
-    this.vlanId = config.vlanId;
-    this.statisticsType = config.statisticsType || "errors";
-    this.saveOnReboot = config.saveOnReboot !== false;
 
     this.client = new NetgearProAvClient({
       host: this.host,
@@ -55,24 +47,79 @@ module.exports = function registerNetgearProAvSwitch(RED) {
       password: this.credentials.password
     });
 
-    this.on("input", async (msg, send, done) => {
-      const operation = msg.operation || this.operation;
+    this.portOptions = async () => this.client.portOptions();
+
+    this.execute = async (operation, msg, actionNode) => {
       const handler = OPERATIONS[operation];
       if (!handler) {
-        const error = new Error(`unsupported NETGEAR Pro AV operation: ${operation}`);
-        this.status({ fill: "red", shape: "ring", text: "bad operation" });
+        throw new Error(`unsupported NETGEAR Pro AV operation: ${operation}`);
+      }
+      return handler(this.client, msg, actionNode);
+    };
+
+    this.switchInfo = () => ({
+      host: this.host,
+      name: this.name || this.host,
+      port: this.port
+    });
+
+    this.on("close", async (removed, done) => {
+      try {
+        await this.client.logout();
+      } catch (error) {
+        this.warn(error.message);
+      }
+      done();
+    });
+  }
+
+  RED.nodes.registerType("netgear-proav-switch", NetgearProAvSwitchConfigNode, {
+    credentials: {
+      username: { type: "text" },
+      password: { type: "password" }
+    }
+  });
+
+  RED.httpAdmin.get("/netgear-proav/switch/:id/ports", RED.auth.needsPermission("netgear-proav-control.read"), async (req, res) => {
+    const switchNode = RED.nodes.getNode(req.params.id);
+    if (!switchNode || typeof switchNode.portOptions !== "function") {
+      res.status(404).json({ error: "NETGEAR Pro AV switch config not found" });
+      return;
+    }
+    try {
+      res.json({ ports: await switchNode.portOptions() });
+    } catch (error) {
+      res.status(error instanceof NetgearProAvAuthError ? 401 : 500).json({ error: error.message });
+    }
+  });
+
+  function NetgearProAvControlNode(config) {
+    RED.nodes.createNode(this, config);
+    this.name = config.name;
+    this.switch = RED.nodes.getNode(config.switch);
+    this.operation = config.operation || "deviceInfo";
+    this.portId = config.portId;
+    this.enabled = config.enabled;
+    this.description = config.description;
+    this.fanMode = config.fanMode;
+    this.vlanId = config.vlanId;
+    this.statisticsType = config.statisticsType || "errors";
+    this.saveOnReboot = config.saveOnReboot !== false;
+
+    this.on("input", async (msg, send, done) => {
+      if (!this.switch) {
+        const error = new Error("NETGEAR Pro AV switch config is missing");
+        this.status({ fill: "red", shape: "ring", text: "missing switch" });
         done(error);
         return;
       }
 
+      const operation = msg.operation || this.operation;
       this.status({ fill: "blue", shape: "dot", text: operation });
       try {
-        const result = await handler(this.client, msg, this);
+        const result = await this.switch.execute(operation, msg, this);
         msg.operation = operation;
-        msg.switch = {
-          host: this.host,
-          name: this.name || this.host
-        };
+        msg.switch = this.switch.switchInfo();
         msg.payload = result;
         this.status({ fill: "green", shape: "dot", text: "ok" });
         send(msg);
@@ -86,27 +133,17 @@ module.exports = function registerNetgearProAvSwitch(RED) {
         done(error);
       }
     });
-
-    this.on("close", async (removed, done) => {
-      try {
-        await this.client.logout();
-      } catch (error) {
-        this.warn(error.message);
-      }
-      done();
-    });
   }
 
-  RED.nodes.registerType("netgear-proav-switch", NetgearProAvSwitchNode, {
-    credentials: {
-      username: { type: "text" },
-      password: { type: "password" }
-    }
-  });
+  RED.nodes.registerType("netgear-proav-control", NetgearProAvControlNode);
 };
 
 function requiredPortId(msg, node) {
   return requiredValue(msg.portId ?? msg.payload?.portId ?? node.portId, "portId");
+}
+
+async function requiredApiPortId(client, msg, node) {
+  return client.requiredApiPortId(requiredPortId(msg, node));
 }
 
 function requiredBoolean(msg, node) {

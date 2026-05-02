@@ -9,9 +9,16 @@ This project is a Node-RED counterpart to the Home Assistant NETGEAR Pro AV inte
 
 ## Nodes
 
-`netgear-proav-switch` represents one physical switch. Put one node in the flow for each switch you want to automate.
+`netgear-proav-switch` is a shared config node that represents one physical switch. It stores the switch host, port, TLS behaviour, timeout, credentials, and authenticated API session.
 
-Each node stores the switch host, port, TLS behaviour, timeout, credentials, and a default operation. The configured operation can be overridden with `msg.operation`, making the node useful in reusable flows.
+`netgear-proav-control` is the visible flow node. Add as many control nodes as you need and point them at the same switch config node. Each control node has a default operation, and that operation can still be overridden with `msg.operation`.
+
+The editor separates actions into:
+
+- `Get` commands for read-only API calls
+- `Set` commands for state-changing control calls
+
+For port actions, the editor loads the available port IDs from the selected switch config node. The dropdown stores the API-safe port ID and displays the switch-reported port name and description where available. Different NETGEAR models may report names as `x/x` or `x/x/x`; the editor preserves the switch-reported form in the label. `msg.portId` can still override the editor value at runtime, and may use either the numeric API ID or the same switch-reported label shown in the dropdown.
 
 ## Supported Operations
 
@@ -58,7 +65,15 @@ Editor defaults can be overridden with message properties:
 - `msg.statisticsType`
 - `msg.config`
 
-The response from the switch is returned in `msg.payload`. The node also adds `msg.switch` with the configured switch name and host.
+Fan mode values:
+
+- `1` = Off
+- `2` = Quiet
+- `3` = Cool
+
+The response from the switch is returned in `msg.payload`. The control node also adds `msg.switch` with the configured switch name, host, and API port.
+
+Port description writes use the extended single-port configuration endpoint first. This avoids the older bulk `swcfg_ports` endpoint on models that reject incomplete bulk payloads with an HTTP 500.
 
 ## Account Guidance
 
@@ -72,7 +87,7 @@ From your Node-RED user directory, install this local package:
 npm install "/Users/antony/Code/Node Red/node-red-contrib-netgear-proav"
 ```
 
-Restart Node-RED after changing node files.
+Restart Node-RED after changing node files. Create one `netgear-proav-switch` config node per switch, then add `netgear-proav-control` nodes for the read/control actions you want to run.
 
 ## Validation
 
