@@ -6,12 +6,25 @@ const OPERATIONS = {
   deviceInfo: (client) => client.deviceInfo(),
   portConfig: async (client, msg, node) => client.portConfig(await requiredApiPortId(client, msg, node)),
   portConfigAll: (client) => client.portConfig(),
+  portSummary: (client) => client.portSummary(),
   portsStatus: (client) => client.portsStatus(),
   portStatus: (client) => client.portStatus(),
-  portStatistics: (client, msg, node) => client.portStatistics(msg.statisticsType || node.statisticsType || "errors"),
+  portStatistics: (client, msg, node) => client.portStatistics(msg.statisticsType || msg.payload?.statisticsType || node.statisticsType || "errors"),
   fiberOptics: (client) => client.fiberOptics(),
   fiberOpticsDiag: (client) => client.fiberOpticsDiag(),
   fiberOpticsEeprom: (client) => client.fiberOpticsEeprom(),
+  stpConfig: (client) => client.stpConfig(),
+  stpPortInfo: (client) => client.stpPortInfo(),
+  multicastGroups: (client, msg, node) => client.multicastGroups({
+    indexPage: msg.indexPage ?? msg.payload?.indexPage ?? node.indexPage,
+    pageSize: msg.pageSize ?? msg.payload?.pageSize ?? node.pageSize,
+    unit: msg.unit ?? msg.payload?.unit ?? node.unit
+  }),
+  multicastMode: (client) => client.multicastMode(),
+  dnsLookup: (client, msg, node) => client.dnsLookup(requiredValue(msg.domainName ?? msg.payload?.domainName ?? node.domainName, "domainName")),
+  pingTest: (client, msg, node) => client.pingTest(requiredValue(msg.ipAddr ?? msg.payload?.ipAddr ?? node.ipAddr, "ipAddr")),
+  traceTest: (client, msg, node) => client.traceTest(requiredValue(msg.ipAddr ?? msg.payload?.ipAddr ?? node.ipAddr, "ipAddr")),
+  cableTest: (client, msg, node) => client.cableTest(requiredValue(msg.ports ?? msg.payload?.ports ?? node.ports, "ports")),
   imageInfo: (client) => client.imageInfo(),
   neighbors: (client) => client.neighbors(),
   profileList: (client) => client.profileList(),
@@ -104,6 +117,12 @@ module.exports = function registerNetgearProAvNodes(RED) {
     this.fanMode = config.fanMode;
     this.vlanId = config.vlanId;
     this.statisticsType = config.statisticsType || "errors";
+    this.domainName = config.domainName;
+    this.ipAddr = config.ipAddr;
+    this.ports = config.ports;
+    this.indexPage = config.indexPage;
+    this.pageSize = config.pageSize;
+    this.unit = config.unit;
     this.saveOnReboot = config.saveOnReboot !== false;
 
     this.on("input", async (msg, send, done) => {

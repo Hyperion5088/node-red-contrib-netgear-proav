@@ -31,6 +31,12 @@
       fanMode: { value: "" },
       vlanId: { value: "" },
       statisticsType: { value: "errors" },
+      domainName: { value: "" },
+      ipAddr: { value: "" },
+      ports: { value: "" },
+      indexPage: { value: "" },
+      pageSize: { value: "" },
+      unit: { value: "" },
       saveOnReboot: { value: true }
     },
     inputs: 1,
@@ -45,12 +51,21 @@
           ["deviceInfo", "Device info"],
           ["portConfig", "Port config"],
           ["portConfigAll", "All port config"],
+          ["portSummary", "Port summary"],
           ["portsStatus", "Ports status"],
           ["portStatus", "Port status"],
           ["portStatistics", "Port statistics"],
           ["fiberOptics", "Fiber optics"],
           ["fiberOpticsDiag", "Fiber diagnostics"],
           ["fiberOpticsEeprom", "Fiber EEPROM"],
+          ["stpConfig", "STP config"],
+          ["stpPortInfo", "STP port info"],
+          ["multicastGroups", "Multicast groups"],
+          ["multicastMode", "Multicast mode"],
+          ["dnsLookup", "DNS lookup"],
+          ["pingTest", "Ping test"],
+          ["traceTest", "Traceroute test"],
+          ["cableTest", "Cable test"],
           ["imageInfo", "Image info"],
           ["neighbors", "LLDP neighbors"],
           ["profileList", "Profile list"],
@@ -100,6 +115,10 @@
         $(".netgear-fan-row").toggle(op === "setFanMode");
         $(".netgear-vlan-row").toggle(op === "vlanMembership");
         $(".netgear-statistics-row").toggle(op === "portStatistics");
+        $(".netgear-domain-row").toggle(op === "dnsLookup");
+        $(".netgear-ip-row").toggle(["pingTest", "traceTest"].includes(op));
+        $(".netgear-ports-row").toggle(op === "cableTest");
+        $(".netgear-pagination-row").toggle(op === "multicastGroups");
         $(".netgear-reboot-row").toggle(op === "reboot");
       };
 
@@ -245,6 +264,30 @@
     <label for="node-input-statisticsType"><i class="fa fa-line-chart"></i> Type</label>
     <input type="text" id="node-input-statisticsType" placeholder="errors">
   </div>
+  <div class="form-row netgear-domain-row">
+    <label for="node-input-domainName"><i class="fa fa-search"></i> Domain</label>
+    <input type="text" id="node-input-domainName" placeholder="Use msg.domainName if blank">
+  </div>
+  <div class="form-row netgear-ip-row">
+    <label for="node-input-ipAddr"><i class="fa fa-location-arrow"></i> Address</label>
+    <input type="text" id="node-input-ipAddr" placeholder="Use msg.ipAddr if blank">
+  </div>
+  <div class="form-row netgear-ports-row">
+    <label for="node-input-ports"><i class="fa fa-ethernet"></i> Ports</label>
+    <input type="text" id="node-input-ports" placeholder="Comma separated, or use msg.ports">
+  </div>
+  <div class="form-row netgear-pagination-row">
+    <label for="node-input-indexPage"><i class="fa fa-list-ol"></i> Page</label>
+    <input type="number" id="node-input-indexPage" placeholder="1">
+  </div>
+  <div class="form-row netgear-pagination-row">
+    <label for="node-input-pageSize"><i class="fa fa-list"></i> Page size</label>
+    <input type="number" id="node-input-pageSize" placeholder="9999">
+  </div>
+  <div class="form-row netgear-pagination-row">
+    <label for="node-input-unit"><i class="fa fa-sitemap"></i> Unit</label>
+    <input type="number" id="node-input-unit" placeholder="Use msg.unit if blank">
+  </div>
   <div class="form-row netgear-reboot-row">
     <label for="node-input-saveOnReboot"><i class="fa fa-save"></i> Save first</label>
     <input type="checkbox" id="node-input-saveOnReboot" style="display:inline-block; width:auto; vertical-align:top;">
@@ -254,9 +297,94 @@
 <script type="text/html" data-help-name="netgear-proav-control">
   <p>Runs one NETGEAR Pro AV switch action using a shared switch config node.</p>
   <p>Use <strong>Command</strong> to filter the action list between read-only <strong>Get</strong> commands and state-changing <strong>Set</strong> commands.</p>
-  <p>The configured action can be overridden with <code>msg.operation</code>. Inputs such as <code>msg.portId</code>, <code>msg.enabled</code>, <code>msg.description</code>, <code>msg.fanMode</code>, <code>msg.vlanId</code>, and <code>msg.config</code> override editor defaults.</p>
-  <p>For port actions, the editor loads the available port IDs from the selected switch config node. The saved value is the switch API port ID, while the visible label uses the switch's port name and description where available. Port labels preserve the switch-reported form, including both <code>x/x</code> and <code>x/x/x</code> formats. Runtime <code>msg.portId</code> may use the numeric API ID or the same visible label.</p>
-  <p>Fan mode options are <code>1</code> Off, <code>2</code> Quiet, and <code>3</code> Cool.</p>
   <p>The switch response is returned in <code>msg.payload</code>. The node also adds <code>msg.switch</code> with the configured switch name, host, and API port.</p>
+  <p>The configured action can be overridden with <code>msg.operation</code>. Runtime inputs override editor defaults.</p>
+
+  <h3>Common inputs</h3>
+  <dl class="message-properties">
+    <dt><code>msg.operation</code></dt>
+    <dd>Overrides the configured action with any supported operation name.</dd>
+    <dt><code>msg.portId</code> or <code>msg.payload.portId</code></dt>
+    <dd>Port target for port-specific operations. May be the numeric API ID or the visible switch label, such as <code>7</code>, <code>0/7</code>, or <code>1/0/7</code>.</dd>
+    <dt><code>msg.config</code> or <code>msg.payload.config</code></dt>
+    <dd>Optional current port configuration row used by write operations to avoid an extra read.</dd>
+  </dl>
+
+  <h3>Get commands</h3>
+  <dl>
+    <dt><code>deviceInfo</code></dt>
+    <dd>Reads switch inventory, firmware, uptime, fan, CPU, memory, PoE capability, and system-level details. No extra inputs.</dd>
+    <dt><code>portConfig</code></dt>
+    <dd>Reads full configuration for one port. Inputs: <code>msg.portId</code>.</dd>
+    <dt><code>portConfigAll</code></dt>
+    <dd>Reads full configuration for all physical ports. No extra inputs.</dd>
+    <dt><code>portSummary</code></dt>
+    <dd>Reads and shapes port config, status, compact state, statistics, fibre optics, PoE, LLDP, STP, and multicast subscriber data into <code>msg.payload.ports[portId]</code>. The <code>multicast</code> object includes <code>group_count</code>, <code>vlans</code>, <code>groups</code>, <code>subscribers</code>, and sorted <code>rows</code>. No extra inputs.</dd>
+    <dt><code>portsStatus</code></dt>
+    <dd>Reads detailed per-port status rows including admin state, link state, media type, profile, description, STP, and physical speed. No extra inputs.</dd>
+    <dt><code>portStatus</code></dt>
+    <dd>Reads compact per-port state and VLAN rows. No extra inputs.</dd>
+    <dt><code>portStatistics</code></dt>
+    <dd>Reads port counters and bandwidth data. Inputs: <code>msg.statisticsType</code>, <code>msg.payload.statisticsType</code>, or editor Type. Common values are <code>errors</code>, <code>inbound</code>, and <code>outbound</code>.</dd>
+    <dt><code>fiberOptics</code></dt>
+    <dd>Reads fibre/SFP inventory and live optical values where present. No extra inputs.</dd>
+    <dt><code>fiberOpticsDiag</code></dt>
+    <dd>Reads raw diagnostic data for fibre/SFP ports. No extra inputs.</dd>
+    <dt><code>fiberOpticsEeprom</code></dt>
+    <dd>Reads EEPROM/vendor data for fibre/SFP ports. No extra inputs.</dd>
+    <dt><code>stpConfig</code></dt>
+    <dd>Reads switch-level Spanning Tree Protocol details including root bridge, priority, topology changes, and timers. No extra inputs.</dd>
+    <dt><code>stpPortInfo</code></dt>
+    <dd>Reads per-port STP mode, edge status, forwarding state, and role. No extra inputs.</dd>
+    <dt><code>multicastGroups</code></dt>
+    <dd>Reads multicast group/subscriber rows. Rows are sorted by port, VLAN, multicast group, subscriber IP, subscriber MAC, and type. The response keeps rows in <code>msg.payload.multicastGroups.rows</code> and adds <code>byPort</code>, <code>byVlan</code>, and <code>byGroup</code> grouped views. Inputs: optional <code>msg.indexPage</code>, <code>msg.payload.indexPage</code>, <code>msg.pageSize</code>, <code>msg.payload.pageSize</code>, <code>msg.unit</code>, or <code>msg.payload.unit</code>. Defaults are page <code>1</code>, page size <code>9999</code>, and unit <code>1</code>.</dd>
+    <dt><code>multicastMode</code></dt>
+    <dd>Reads multicast mode for physical and LAG ports on models that populate this endpoint. Tested switches may return a successful but empty payload. No extra inputs.</dd>
+    <dt><code>dnsLookup</code></dt>
+    <dd>Runs a DNS lookup from the switch. Inputs: <code>msg.domainName</code> or <code>msg.payload.domainName</code>.</dd>
+    <dt><code>pingTest</code></dt>
+    <dd>Runs a ping from the switch. Inputs: <code>msg.ipAddr</code> or <code>msg.payload.ipAddr</code>.</dd>
+    <dt><code>traceTest</code></dt>
+    <dd>Runs a traceroute from the switch. Inputs: <code>msg.ipAddr</code> or <code>msg.payload.ipAddr</code>.</dd>
+    <dt><code>cableTest</code></dt>
+    <dd>Runs cable diagnostics against one or more physical ports. Inputs: <code>msg.ports</code> or <code>msg.payload.ports</code> as an array or comma-separated list of numeric API port IDs. Cable diagnostics may briefly affect the tested ports.</dd>
+    <dt><code>imageInfo</code></dt>
+    <dd>Reads firmware image information. No extra inputs.</dd>
+    <dt><code>neighbors</code></dt>
+    <dd>Reads LLDP neighbor rows. No extra inputs.</dd>
+    <dt><code>profileList</code></dt>
+    <dd>Reads configured/active AV profile definitions. No extra inputs.</dd>
+    <dt><code>poeInfo</code></dt>
+    <dd>Reads switch-level PoE budget and consumption information. No extra inputs.</dd>
+    <dt><code>poePortConfig</code></dt>
+    <dd>Reads PoE configuration for one port. Inputs: <code>msg.portId</code>.</dd>
+    <dt><code>lagConfig</code></dt>
+    <dd>Reads link aggregation group configuration. No extra inputs.</dd>
+    <dt><code>stacking</code></dt>
+    <dd>Reads stack/member information where supported. No extra inputs.</dd>
+    <dt><code>vlanMembership</code></dt>
+    <dd>Reads VLAN membership for one VLAN. Inputs: <code>msg.vlanId</code> or <code>msg.payload.vlanId</code>.</dd>
+  </dl>
+
+  <h3>Set commands</h3>
+  <dl>
+    <dt><code>setPortAdmin</code></dt>
+    <dd>Enables or disables a port administratively. Inputs: <code>msg.portId</code> and <code>msg.enabled</code> or <code>msg.payload.enabled</code>. Accepted booleans include <code>true</code>, <code>false</code>, <code>1</code>, <code>0</code>, <code>on</code>, and <code>off</code>.</dd>
+    <dt><code>setPortDescription</code></dt>
+    <dd>Sets one port description. Inputs: <code>msg.portId</code> and <code>msg.description</code> or <code>msg.payload.description</code>. Uses the extended single-port endpoint first, then falls back to the older bulk endpoint.</dd>
+    <dt><code>setPoeEnabled</code></dt>
+    <dd>Enables or disables PoE on one port. Inputs: <code>msg.portId</code> and <code>msg.enabled</code> or <code>msg.payload.enabled</code>.</dd>
+    <dt><code>resetPoe</code></dt>
+    <dd>Power-cycles PoE on one port. Inputs: <code>msg.portId</code> or <code>msg.payload.portId</code>. Optional <code>msg.config</code> or <code>msg.payload.config</code> can provide the current PoE row.</dd>
+    <dt><code>setFanMode</code></dt>
+    <dd>Sets switch fan mode. Inputs: <code>msg.fanMode</code> or <code>msg.payload.fanMode</code>. Values are <code>1</code> Off, <code>2</code> Quiet, and <code>3</code> Cool.</dd>
+    <dt><code>saveConfig</code></dt>
+    <dd>Saves the running switch configuration. No extra inputs. The switch should return a success/failure response when the command is accepted.</dd>
+    <dt><code>reboot</code></dt>
+    <dd>Reboots the switch. Inputs: <code>msg.save</code> or <code>msg.payload.save</code> to control whether the switch saves first. If omitted, the editor <strong>Save first</strong> checkbox is used. Some models reboot before the HTTP response is returned, so a network error can still mean the reboot command was accepted.</dd>
+  </dl>
+
+  <h3>Port labels</h3>
+  <p>For port actions, the editor loads available ports from the selected switch config node. The saved value is the switch API port ID, while the visible label uses the switch's port name and description where available. Port labels preserve the switch-reported form, including both <code>x/x</code> and <code>x/x/x</code> formats.</p>
   <p><strong>Be careful:</strong> port admin, PoE, save config, and reboot actions change switch state.</p>
 </script>
