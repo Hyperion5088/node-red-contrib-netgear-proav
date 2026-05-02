@@ -1,0 +1,76 @@
+[
+  {
+    "id": "a89d640238e1f7fd",
+    "type": "tab",
+    "label": "NETGEAR Pro AV example",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "32768d24683f5f30",
+    "type": "inject",
+    "z": "a89d640238e1f7fd",
+    "name": "Read device info",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 100,
+    "wires": [
+      [
+        "c3876b11ccfb32b7"
+      ]
+    ]
+  },
+  {
+    "id": "c3876b11ccfb32b7",
+    "type": "netgear-proav-switch",
+    "z": "a89d640238e1f7fd",
+    "name": "Example switch",
+    "host": "192.168.1.23",
+    "port": "443",
+    "verifySsl": false,
+    "timeout": "15000",
+    "operation": "deviceInfo",
+    "portId": "",
+    "enabled": "",
+    "description": "",
+    "fanMode": "",
+    "vlanId": "",
+    "statisticsType": "errors",
+    "saveOnReboot": true,
+    "x": 390,
+    "y": 100,
+    "wires": [
+      [
+        "dd5092704753a297"
+      ]
+    ]
+  },
+  {
+    "id": "dd5092704753a297",
+    "type": "debug",
+    "z": "a89d640238e1f7fd",
+    "name": "Switch response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 620,
+    "y": 100,
+    "wires": []
+  }
+]

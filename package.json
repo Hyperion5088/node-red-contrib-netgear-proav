@@ -1,0 +1,35 @@
+{
+  "name": "@hyperion5088/node-red-contrib-netgear-proav",
+  "version": "0.1.0",
+  "description": "Node-RED nodes for NETGEAR Pro AV switch REST API monitoring and control.",
+  "license": "MIT",
+  "author": "Hyperion5088",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hyperion5088/node-red-contrib-netgear-proav.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hyperion5088/node-red-contrib-netgear-proav/issues"
+  },
+  "homepage": "https://github.com/Hyperion5088/node-red-contrib-netgear-proav#readme",
+  "keywords": [
+    "node-red",
+    "netgear",
+    "proav",
+    "pro-av",
+    "switch",
+    "av"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node --check lib/client.js && node --check nodes/netgear-proav-switch.js"
+  },
+  "node-red": {
+    "version": ">=3.0.0",
+    "nodes": {
+      "netgear-proav-switch": "nodes/netgear-proav-switch.js"
+    }
+  }
+}
