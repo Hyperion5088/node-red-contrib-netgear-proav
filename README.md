@@ -2,6 +2,8 @@
 
 Node-RED nodes for monitoring and controlling NETGEAR Pro AV switches through the AVUI REST API.
 
+Status: beta. These nodes are usable for testing, but node configuration, outputs, and command coverage may still change before a stable release.
+
 This project is a Node-RED counterpart to the Home Assistant NETGEAR Pro AV integration:
 
 - Home Assistant integration: `homeassistant-netgear-proav`
