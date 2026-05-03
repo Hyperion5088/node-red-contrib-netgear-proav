@@ -1,7 +1,7 @@
 {
   "name": "@hyperion5088/node-red-contrib-netgear-proav",
   "version": "0.1.10",
-  "description": "Node-RED nodes for NETGEAR Pro AV switch REST API monitoring and control.",
+  "description": "Beta Node-RED nodes for NETGEAR Pro AV switch REST API monitoring and control.",
   "license": "MIT",
   "author": "Hyperion5088",
   "repository": {
