@@ -99,7 +99,7 @@ Create a dedicated switch user for automation. Avoid using the built-in `admin` 
 From your Node-RED user directory, install this local package:
 
 ```bash
-npm install "/Users/antony/Code/Node Red/node-red-contrib-netgear-proav"
+npm install "/Users/antony/Code/Node Red/Nodes/node-red-contrib-netgear-proav"
 ```
 
 Restart Node-RED after changing node files. Create one `netgear-proav-switch` config node per switch, then add `netgear-proav-control` nodes for the read/control actions you want to run.
