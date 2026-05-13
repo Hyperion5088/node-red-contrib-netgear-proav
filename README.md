@@ -54,6 +54,7 @@ Common runtime inputs:
 | `traceTest` | Runs a traceroute from the switch. | `msg.ipAddr` or `msg.payload.ipAddr` |
 | `cableTest` | Runs cable diagnostics against one or more physical ports. Cable diagnostics may briefly affect the tested ports. | `msg.ports` or `msg.payload.ports` as an array or comma-separated list |
 | `imageInfo` | Reads firmware image information. | None |
+| `configStatus` | Reads device and image information, then reports whether the running configuration appears to need saving. The payload includes `configSaveNeeded`, `runningConfigMatchesSaved`, `source`, and raw switch responses when available. | None |
 | `neighbors` | Reads LLDP neighbor rows. | None |
 | `profileList` | Reads configured/active AV profile definitions. | None |
 | `poeInfo` | Reads switch-level PoE budget and consumption information. | None |
@@ -71,7 +72,7 @@ Common runtime inputs:
 | `setPoeEnabled` | Enables or disables PoE on one port. | `msg.portId`, plus `msg.enabled` or `msg.payload.enabled` |
 | `resetPoe` | Power-cycles PoE on one port. | `msg.portId` |
 | `setFanMode` | Sets switch fan mode. | `msg.fanMode` or `msg.payload.fanMode`; values are `1` Off, `2` Quiet, and `3` Cool |
-| `saveConfig` | Saves the running switch configuration. | None |
+| `saveConfig` | Saves the running switch configuration. Some models return an empty successful response, in which case `msg.payload` is `null`. | None |
 | `reboot` | Reboots the switch. The switch may close the connection before returning a response. | `msg.save` or `msg.payload.save` controls whether the switch saves first; defaults to the editor checkbox |
 
 Accepted boolean values for `msg.enabled` include `true`, `false`, `1`, `0`, `on`, and `off`.

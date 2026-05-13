@@ -67,6 +67,7 @@
           ["traceTest", "Traceroute test"],
           ["cableTest", "Cable test"],
           ["imageInfo", "Image info"],
+          ["configStatus", "Config status"],
           ["neighbors", "LLDP neighbors"],
           ["profileList", "Profile list"],
           ["poeInfo", "PoE info"],
@@ -350,6 +351,8 @@
     <dd>Runs cable diagnostics against one or more physical ports. Inputs: <code>msg.ports</code> or <code>msg.payload.ports</code> as an array or comma-separated list of numeric API port IDs. Cable diagnostics may briefly affect the tested ports.</dd>
     <dt><code>imageInfo</code></dt>
     <dd>Reads firmware image information. No extra inputs.</dd>
+    <dt><code>configStatus</code></dt>
+    <dd>Reads device and image information, then reports whether the running configuration appears to need saving. The payload includes <code>configSaveNeeded</code>, <code>runningConfigMatchesSaved</code>, <code>source</code>, and the raw <code>deviceInfo</code>/<code>imageInfo</code> responses when available.</dd>
     <dt><code>neighbors</code></dt>
     <dd>Reads LLDP neighbor rows. No extra inputs.</dd>
     <dt><code>profileList</code></dt>
@@ -379,7 +382,7 @@
     <dt><code>setFanMode</code></dt>
     <dd>Sets switch fan mode. Inputs: <code>msg.fanMode</code> or <code>msg.payload.fanMode</code>. Values are <code>1</code> Off, <code>2</code> Quiet, and <code>3</code> Cool.</dd>
     <dt><code>saveConfig</code></dt>
-    <dd>Saves the running switch configuration. No extra inputs. The switch should return a success/failure response when the command is accepted.</dd>
+    <dd>Saves the running switch configuration. No extra inputs. Some models return an empty successful response, in which case <code>msg.payload</code> is <code>null</code>.</dd>
     <dt><code>reboot</code></dt>
     <dd>Reboots the switch. Inputs: <code>msg.save</code> or <code>msg.payload.save</code> to control whether the switch saves first. If omitted, the editor <strong>Save first</strong> checkbox is used. Some models reboot before the HTTP response is returned, so a network error can still mean the reboot command was accepted.</dd>
   </dl>

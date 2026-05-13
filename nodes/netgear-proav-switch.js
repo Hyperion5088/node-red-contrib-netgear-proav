@@ -26,6 +26,7 @@ const OPERATIONS = {
   traceTest: (client, msg, node) => client.traceTest(requiredValue(msg.ipAddr ?? msg.payload?.ipAddr ?? node.ipAddr, "ipAddr")),
   cableTest: (client, msg, node) => client.cableTest(requiredValue(msg.ports ?? msg.payload?.ports ?? node.ports, "ports")),
   imageInfo: (client) => client.imageInfo(),
+  configStatus: (client) => client.configStatus(),
   neighbors: (client) => client.neighbors(),
   profileList: (client) => client.profileList(),
   poeInfo: (client) => client.poeInfo(),
