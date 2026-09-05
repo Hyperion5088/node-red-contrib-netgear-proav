@@ -6,3 +6,6 @@ coverage/
 .env
 private/
 releases/*.tgz
+
+# Local build and maintenance outputs
+/*.tgz
