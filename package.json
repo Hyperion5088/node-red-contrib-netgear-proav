@@ -24,7 +24,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "check": "node --check lib/client.js && node --check nodes/netgear-proav-switch.js"
+    "check": "node --check lib/client.js && node --check nodes/netgear-proav-switch.js",
+    "test": "node --test test/*.test.js"
   },
   "node-red": {
     "version": ">=3.0.0",

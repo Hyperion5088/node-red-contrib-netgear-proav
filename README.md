@@ -9,6 +9,14 @@ This project is a Node-RED counterpart to the Home Assistant NETGEAR Pro AV inte
 - Home Assistant integration: `homeassistant-netgear-proav`
 - Node-RED package: `node-red-contrib-netgear-proav`
 
+## Programmatic transport options
+
+Direct users of `lib/client.js` may pass optional `ca`, `certificateFingerprint256` and `maxResponseBytes` in the client constructor. `ca` uses Node HTTPS CA input (PEM string, Buffer or array); with `verifySsl: true` it verifies the peer against that trust. It does not disable hostname or certificate verification. Omitting it preserves Node's existing default trust behavior.
+
+`certificateFingerprint256` is an optional explicit SHA256 leaf-certificate fingerprint (64 hex digits or colon-separated octets). It requires `verifySsl: true` and HTTPS. Normal certificate-chain/validity verification remains enabled, using `ca` or Node default trust. Only an exact fingerprint match replaces hostname checking; a different leaf is rejected even if its name would match. Obtain and approve each device fingerprint through a trusted independent process; observing a certificate over an unverified connection does not establish trust. Omitting this option preserves ordinary hostname verification. This is a programmatic client option, not a Node-RED message override.
+
+`maxResponseBytes` is a positive safe integer limiting each HTTP response body in bytes before JSON parsing, including authentication and legacy API responses. An oversized stream is destroyed and rejected with `NetgearProAvResponseError`; the client does not retain the remaining body. Omitting this option preserves the previous uncapped behavior. Existing switch response shapes and Node-RED editor/message options are unchanged; these controls are programmatic client options only.
+
 ## Nodes
 
 `netgear-proav-switch` is a shared config node that represents one physical switch. It stores the switch host, port, TLS behaviour, timeout, credentials, and authenticated API session.
